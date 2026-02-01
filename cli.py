@@ -7,6 +7,8 @@ from rich.console import Console
 from rich.table import Table
 
 from normalizer.loader import load_table, UnsupportedFileTypeError
+from normalizer.profiler import profile_dataframe
+
 
 app = typer.Typer(add_completion=False)
 console = Console() ## rich console 
@@ -40,6 +42,9 @@ def run(
 
     try:
         df = load_table(input_path, sheet=sheet_val)
+        profiles = profile_dataframe(df)
+        _print_profile(profiles)
+
     except FileNotFoundError as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(code=1)
@@ -64,6 +69,27 @@ def run(
 
     if preview_rows > 0:
         _print_preview(df, max_rows=preview_rows)
+
+
+def _print_profile(profiles):
+    table = Table(title="Column Profile", show_lines=False)
+
+    table.add_column("Column")
+    table.add_column("Type")
+    table.add_column("Missing %", justify="right")
+    table.add_column("Unique", justify="right")
+    table.add_column("Samples")
+
+    for p in profiles:
+        table.add_row(
+            p.name,
+            p.inferred_type,
+            f"{p.missing_pct}%",
+            str(p.unique_count),
+            ", ".join(p.samples),
+        )
+
+    console.print(table)
 
 
 if __name__ == "__main__":
