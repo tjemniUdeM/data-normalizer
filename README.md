@@ -1,30 +1,63 @@
-## Status
-🚧 Work in progress: building a CLI tool to normalize messy CSV/Excel files into clean, backend-ready formats.
+## Usage
 
-## Date parsing rule
+Run the CLI on a CSV or Excel file:
 
-This tool supports mixed date formats using a deterministic rule:
+python cli.py path/to/file.csv [OPTIONS]
 
-**The month must always be the middle component of the date.**
+All outputs are written inside the `output/` directory.
 
-### Accepted formats
-Any non-digit delimiter is allowed (`-`, `/`, `.`), as long as the order is one of:
+Each run creates (or reuses) a run-specific folder named:
 
-- `YYYY-MM-DD`
-- `DD-MM-YYYY`
+output/<input_name>OUT_<YYYY-MM-DD>/
 
-Examples:
-2024-01-05
-01/06/2024
-2024/01/07
+If `--out` is provided, outputs are written to:
 
-All accepted formats are normalized to:
+output/<out>/<input_name>OUT_<YYYY-MM-DD>/
 
-YYYY-MM-DD
+Each run folder contains:
+- Normalized CSV data
+- JSON records
+- SQL schema
+- JSON schema
+- Profiling report
 
-and stored internally as datetime values (`TIMESTAMP` in SQL).
+### CLI Options
 
-### Unsupported / ambiguous formats
-Dates where the month is **not** in the middle are rejected and treated as missing values:
-MM-DD-YYYY
-YYYY-DD-MM
+input_path  
+Path to the input `.csv` or `.xlsx/.xls` file.
+
+--sheet  
+Excel sheet name or index (only for Excel files).  
+Examples: Sheet1, 0
+
+--preview-rows  
+Number of rows to preview in the terminal (0–50).  
+Default: 5
+
+--table  
+SQL table name used in the generated CREATE TABLE statement.  
+Default: normalized_data
+
+--show-schema / --no-show-schema  
+Print generated SQL and JSON schemas to the terminal.  
+Default: disabled
+
+--export  
+Write output files to disk.  
+If not provided, no files are written.
+
+--out  
+Subfolder inside `./output` used to group runs.  
+Example: results  
+Outputs will be written to:  
+output/results/<input_name>OUT_<YYYY-MM-DD>/
+
+--overwrite / --no-overwrite  
+Control whether existing run folders can be reused.  
+Default: overwrite enabled
+
+### Overwrite behavior
+
+By default, outputs overwrite files in the run folder if it already exists.  
+Use --no-overwrite to prevent replacing existing results.  
+If the output folder already exists and overwrite is disabled, the command exits with an error.
