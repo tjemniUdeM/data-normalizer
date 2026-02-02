@@ -55,12 +55,12 @@ def _looks_date(series: pd.Series) -> bool:
             series.dropna()
             .astype(str)
             .str.strip()
-            .replace("", pd.NA) ##we can ignore white spaces or null charaacters
+            .replace("", pd.NA) #we can ignore white spaces or null charaacters
             .dropna()
         )
         if s.empty:
             return False
-
+        # mixed date formats are expected; silence pandas inference warning
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
             parsed = pd.to_datetime(s, errors="coerce")

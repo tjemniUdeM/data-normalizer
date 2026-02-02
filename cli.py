@@ -45,9 +45,11 @@ def run(
     sheet: str = typer.Option(None, "--sheet", help="Excel sheet name or index (e.g. 'Sheet1' or '0')"),
     preview_rows: int = typer.Option(5, "--preview-rows", min=0, max=50, help="How many rows to preview"),
     table_name: str = typer.Option("normalized_data", "--table", help="SQL table name"),
-    show_schema: bool = typer.Option(True, "--show-schema/--no-show-schema", help="Print generated schemas"),
-    outdir: str = typer.Option("output", "--out", help="Output directory"),
+    show_schema: bool = typer.Option(False, "--show-schema/--no-show-schema", help="Print generated schemas"),
+    outdir: str = typer.Option("", "--out", help="Subfolder inside ./output (e.g. 'results')"),
     export_files: bool = typer.Option(False, "--export", help="Write outputs to files"),
+    overwrite: bool = typer.Option(True,"--overwrite/--no-overwrite",help="Overwrite existing output files",),
+
 
 
 ) -> None:
@@ -55,6 +57,7 @@ def run(
     
     input_path_obj = Path(input_path)
     output_prefix = f"{input_path_obj.stem}OUT"
+    
     run_date = date.today().isoformat()  # e.g. 2026-02-02
     run_folder_name = f"{output_prefix}_{run_date}"
 
@@ -72,7 +75,14 @@ def run(
         create_sql = generate_create_table_sql(df_clean, table_name=table_name)
         json_schema = generate_json_schema(df_clean, title=table_name)
         if export_files:
-            base_out_path = ensure_outdir(outdir)
+            base_root = ensure_outdir("output")  # always the root
+            base_out_path = ensure_outdir(base_root / outdir) if outdir else base_root
+
+            out_path = base_out_path / run_folder_name
+            if out_path.exists() and not overwrite:
+                console.print(f"[red]Error:[/red] Output folder already exists: {out_path}")
+                console.print("Run again with --overwrite or choose a different --out directory.")
+                raise typer.Exit(code=4)
             out_path = ensure_outdir(base_out_path / run_folder_name)
 
             clean_csv_path = export_clean_csv(
@@ -87,9 +97,6 @@ def run(
             json_schema_path = export_json(
                 json_schema, out_path, f"{output_prefix}_schema.json"
             )
-
-
-
             # simple report: profiles + row/col counts
             report = {
                 "rows": int(len(df_clean)),
