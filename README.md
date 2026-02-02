@@ -2,11 +2,8 @@
 
 Run the CLI on a CSV or Excel file:
 
-python cli.py path/to/file.csv [OPTIONS]
-
-All outputs are written inside the `output/` directory.
-
-Each run creates (or reuses) a run-specific folder named:
+```bash
+data-normalizer path/to/file.csv [OPTIONS]
 
 output/<input_name>OUT_<YYYY-MM-DD>/
 

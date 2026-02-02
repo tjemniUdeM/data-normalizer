@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tj-data-normalizer"
+version = "0.1.1"
+description = "CLI tool to normalize tabular data and generate schemas"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+
+
+authors = [
+  { name = "Your Name" }
+]
+
+dependencies = [
+  "pandas>=1.5",
+  "typer>=0.9",
+  "rich>=13.0",
+  "openpyxl>=3.0"
+]
+
+[project.scripts]
+data-normalizer = "normalizer.cli:main"
+
+[tool.setuptools]
+packages = ["normalizer"]
