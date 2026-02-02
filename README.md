@@ -1,5 +1,17 @@
-## Usage
+# Data Normalizer
 
+Data Normalizer is a Python CLI tool for cleaning and normalizing tabular data from CSV or Excel files.
+
+It profiles columns, infers data types, normalizes values (including mixed date formats), and generates:
+- Cleaned CSV output
+- JSON records
+- SQL `CREATE TABLE` schemas
+- JSON Schema definitions
+- A lightweight profiling report
+
+The tool is designed to be deterministic, scriptable, and easy to integrate into data pipelines.
+
+## Usage
 Run the CLI on a CSV or Excel file:
 
 ```bash
@@ -17,6 +29,11 @@ Each run folder contains:
 - SQL schema
 - JSON schema
 - Profiling report
+
+## Why this project exists
+
+Real-world tabular data is often messy, inconsistent, and hard to load directly into databases.
+This tool provides a repeatable way to normalize datasets and generate reliable schemas before ingestion.
 
 ### CLI Options
 
