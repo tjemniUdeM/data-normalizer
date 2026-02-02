@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 import pandas as pd
+import json
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from normalizer.loader import load_table, UnsupportedFileTypeError
 from normalizer.profiler import profile_dataframe
+from normalizer.cleaner import normalize_dataframe
+from normalizer.schema import generate_create_table_sql, generate_json_schema
+
 
 
 app = typer.Typer(add_completion=False)
@@ -32,6 +36,9 @@ def run(
     input_path: str = typer.Argument(..., help="Path to input .csv or .xlsx/.xls file"),
     sheet: str = typer.Option(None, "--sheet", help="Excel sheet name or index (e.g. 'Sheet1' or '0')"),
     preview_rows: int = typer.Option(5, "--preview-rows", min=0, max=50, help="How many rows to preview"),
+    table_name: str = typer.Option("normalized_data", "--table", help="SQL table name"),
+    show_schema: bool = typer.Option(True, "--show-schema/--no-show-schema", help="Print generated schemas"),
+
 ) -> None:
 
     ##Load a CSV/Excel file and print basic info.
@@ -44,6 +51,18 @@ def run(
         df = load_table(input_path, sheet=sheet_val)
         profiles = profile_dataframe(df)
         _print_profile(profiles)
+        df_clean = normalize_dataframe(df, profiles)
+        create_sql = generate_create_table_sql(df_clean, table_name=table_name)
+        json_schema = generate_json_schema(df_clean, title=table_name)
+
+        if show_schema:
+            console.print("\n[bold]SQL Schema (CREATE TABLE)[/bold]")
+            console.print(create_sql)
+
+            console.print("\n[bold]JSON Schema[/bold]")
+            console.print_json(json.dumps(json_schema))
+
+
 
     except FileNotFoundError as e:
         console.print(f"[red]Error:[/red] {e}")
@@ -68,7 +87,8 @@ def run(
         console.print(f"  ... +{len(cols) - 30} more")
 
     if preview_rows > 0:
-        _print_preview(df, max_rows=preview_rows)
+        console.print("\n[bold]Cleaned Preview[/bold]")
+        _print_preview(df_clean, max_rows=preview_rows)
 
 
 def _print_profile(profiles):

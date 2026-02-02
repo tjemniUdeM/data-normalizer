@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import List
 
 import pandas as pd
+import warnings
 
 
 @dataclass
@@ -50,10 +51,23 @@ def _looks_float(series: pd.Series) -> bool:
 
 def _looks_date(series: pd.Series) -> bool:
     try:
-        parsed = pd.to_datetime(series.dropna(), errors="coerce")
-        return parsed.notna().mean() > 0.8 ## If 80% of data is datetime
+        s = (
+            series.dropna()
+            .astype(str)
+            .str.strip()
+            .replace("", pd.NA) ##we can ignore white spaces or null charaacters
+            .dropna()
+        )
+        if s.empty:
+            return False
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            parsed = pd.to_datetime(s, errors="coerce")
+        return parsed.notna().mean() >= 0.8
     except Exception:
         return False
+
 
 
 def infer_type(series: pd.Series) -> str:
