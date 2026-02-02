@@ -69,9 +69,18 @@ def run(
 
     try:
         df = load_table(input_path, sheet=sheet_val)
+        #if the file is empty 
+        if df.empty:
+            console.print("[red]Error:[/red] Input file contains no rows.")
+            raise typer.Exit(code=5)
+
         profiles = profile_dataframe(df)
         _print_profile(profiles)
         df_clean = normalize_dataframe(df, profiles)
+        #in case there is an unsusable column 
+        if df_clean.shape[1] == 0:
+            console.print("[red]Error:[/red] No usable columns after normalization.")
+            raise typer.Exit(code=6)
         create_sql = generate_create_table_sql(df_clean, table_name=table_name)
         json_schema = generate_json_schema(df_clean, title=table_name)
         if export_files:
