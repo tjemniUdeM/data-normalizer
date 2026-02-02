@@ -4,6 +4,8 @@ from pathlib import Path
 import pandas as pd
 import json
 import typer
+from datetime import date
+from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
@@ -11,7 +13,13 @@ from normalizer.loader import load_table, UnsupportedFileTypeError
 from normalizer.profiler import profile_dataframe
 from normalizer.cleaner import normalize_dataframe
 from normalizer.schema import generate_create_table_sql, generate_json_schema
-
+from normalizer.exporter import (
+    ensure_outdir,
+    export_clean_csv,
+    export_json_records,
+    export_text,
+    export_json,
+)
 
 
 app = typer.Typer(add_completion=False)
@@ -38,11 +46,20 @@ def run(
     preview_rows: int = typer.Option(5, "--preview-rows", min=0, max=50, help="How many rows to preview"),
     table_name: str = typer.Option("normalized_data", "--table", help="SQL table name"),
     show_schema: bool = typer.Option(True, "--show-schema/--no-show-schema", help="Print generated schemas"),
+    outdir: str = typer.Option("output", "--out", help="Output directory"),
+    export_files: bool = typer.Option(False, "--export", help="Write outputs to files"),
+
 
 ) -> None:
+    ## prepare output path
+    
+    input_path_obj = Path(input_path)
+    output_prefix = f"{input_path_obj.stem}OUT"
+    run_date = date.today().isoformat()  # e.g. 2026-02-02
+    run_folder_name = f"{output_prefix}_{run_date}"
+
 
     ##Load a CSV/Excel file and print basic info.
-
     sheet_val: str | int | None = sheet
     if sheet is not None and sheet.isdigit():
         sheet_val = int(sheet)
@@ -54,6 +71,51 @@ def run(
         df_clean = normalize_dataframe(df, profiles)
         create_sql = generate_create_table_sql(df_clean, table_name=table_name)
         json_schema = generate_json_schema(df_clean, title=table_name)
+        if export_files:
+            base_out_path = ensure_outdir(outdir)
+            out_path = ensure_outdir(base_out_path / run_folder_name)
+
+            clean_csv_path = export_clean_csv(
+            df_clean, out_path, f"{output_prefix}_clean.csv"
+            )
+            json_data_path = export_json_records(
+                df_clean, out_path, f"{output_prefix}_data.json"
+            )
+            sql_path = export_text(
+                create_sql, out_path, f"{output_prefix}_schema.sql"
+            )
+            json_schema_path = export_json(
+                json_schema, out_path, f"{output_prefix}_schema.json"
+            )
+
+
+
+            # simple report: profiles + row/col counts
+            report = {
+                "rows": int(len(df_clean)),
+                "columns": int(len(df_clean.columns)),
+                "profiles": [
+                    {
+                        "name": p.name,
+                        "inferred_type": p.inferred_type,
+                        "missing_pct": p.missing_pct,
+                        "unique_count": p.unique_count,
+                        "samples": p.samples,
+                    }
+                    for p in profiles
+                ],
+            }
+            
+            report_path = export_json(
+                report, out_path, f"{output_prefix}_report.json"
+            )
+
+            console.print("\n[bold]Exported files:[/bold]")
+            console.print(f"  • {clean_csv_path}")
+            console.print(f"  • {json_data_path}")
+            console.print(f"  • {sql_path}")
+            console.print(f"  • {json_schema_path}")
+            console.print(f"  • {report_path}")
 
         if show_schema:
             console.print("\n[bold]SQL Schema (CREATE TABLE)[/bold]")
